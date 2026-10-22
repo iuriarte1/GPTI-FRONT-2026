@@ -1,6 +1,4 @@
-import React from 'react';
-
-const FUENTES = `@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap');`;
+import { Link } from 'react-router-dom';
 
 const DISPLAY = "font-['Bricolage_Grotesque',sans-serif]";
 
@@ -86,8 +84,6 @@ const SEMANA = [
 export default function LandingPage() {
     return (
         <div className="flex min-h-screen flex-col bg-white font-['DM_Sans',system-ui,sans-serif] leading-normal text-[#0F1B2D]">
-            <style>{FUENTES}</style>
-
             {/* ===== NAVBAR ===== */}
             <nav className="border-b border-blue-100">
                 <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-5 xl:px-10">
@@ -95,12 +91,15 @@ export default function LandingPage() {
                         <span className="text-4xl">❇️</span> NutriCart
                     </div>
                     <div className="flex items-center gap-6">
-                        <button className="font-semibold text-gray-600 transition hover:text-[#0B5FD0]">
+                        <Link to="/login" className="font-semibold text-gray-600 transition hover:text-[#0B5FD0]">
                             Iniciar Sesión
-                        </button>
-                        <button className="rounded-full bg-[#0B5FD0] px-6 py-2.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+                        </Link>
+                        <Link
+                            to="/registro"
+                            className="rounded-full bg-[#0B5FD0] px-6 py-2.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                        >
                             Crear cuenta
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </nav>
@@ -122,12 +121,12 @@ export default function LandingPage() {
                             supermercado.
                         </p>
                         <div className="flex flex-wrap items-center gap-4">
-                            <a
-                                href="#"
+                            <Link
+                                to="/registro"
                                 className="rounded-full bg-[#0B5FD0] px-7 py-[17px] text-[17px] font-bold text-white no-underline transition hover:-translate-y-0.5 hover:shadow-lg 2xl:px-9 2xl:py-5 2xl:text-xl"
                             >
                                 Planificar mi semana
-                            </a>
+                            </Link>
                             <span className="text-[15px] text-[#42516A] 2xl:text-lg">
                                 Gratis · menos de 2 minutos
                             </span>
