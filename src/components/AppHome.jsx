@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const DISPLAY = "font-['Bricolage_Grotesque',sans-serif]";
@@ -31,13 +31,21 @@ export default function AppHome() {
                     <div className={`${DISPLAY} flex items-center gap-2 text-3xl font-extrabold tracking-tight text-[#0B5FD0]`}>
                         <span className="text-4xl">❇️</span> NutriCart
                     </div>
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        className={`rounded-full border border-blue-100 px-6 py-2.5 font-semibold text-[#0A2350] transition hover:border-[#0B5FD0] hover:text-[#0B5FD0] ${FOCO}`}
-                    >
-                        Cerrar sesión
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            to="/perfil"
+                            className={`rounded-full border border-blue-100 px-6 py-2.5 font-semibold text-[#0A2350] transition hover:border-[#0B5FD0] hover:text-[#0B5FD0] ${FOCO}`}
+                        >
+                            Mi perfil
+                        </Link>
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            className={`rounded-full border border-blue-100 px-6 py-2.5 font-semibold text-[#0A2350] transition hover:border-[#0B5FD0] hover:text-[#0B5FD0] ${FOCO}`}
+                        >
+                            Cerrar sesión
+                        </button>
+                    </div>
                 </div>
             </nav>
 
