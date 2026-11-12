@@ -4,6 +4,7 @@ import LoginPage from './components/LoginPage'
 import RegisterPage from './components/RegisterPage'
 import AppHome from './components/AppHome'
 import PerfilPage from './components/PerfilPage'
+import ConfigMenuPage from './components/ConfigMenuPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -26,6 +27,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PerfilPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/menu"
+          element={
+            <ProtectedRoute>
+              <ConfigMenuPage />
             </ProtectedRoute>
           }
         />
