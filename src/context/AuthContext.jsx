@@ -39,8 +39,21 @@ export function AuthProvider({ children }) {
         setSession({ token: null, user: null });
     }
 
+    function updateUser(parcial) {
+        setSession((actual) => {
+            if (!actual.user) return actual;
+            const nueva = { ...actual, user: { ...actual.user, ...parcial } };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(nueva));
+            } catch {
+                // Si no se puede guardar, el cambio dura solo mientras la pestaña esté abierta.
+            }
+            return nueva;
+        });
+    }
+
     return (
-        <AuthContext.Provider value={{ user: session.user, token: session.token, login, logout }}>
+        <AuthContext.Provider value={{ user: session.user, token: session.token, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );
