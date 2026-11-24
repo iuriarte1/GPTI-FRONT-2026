@@ -1,5 +1,6 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import * as authApi from '../api/auth';
+import { getMe } from '../api/user';
 
 const STORAGE_KEY = 'nutricart_session';
 
@@ -30,16 +31,16 @@ export function AuthProvider({ children }) {
         return user;
     }
 
-    function logout() {
+    const logout = useCallback(() => {
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch {
             // Nada que limpiar.
         }
         setSession({ token: null, user: null });
-    }
+    }, []);
 
-    function updateUser(parcial) {
+    const updateUser = useCallback((parcial) => {
         setSession((actual) => {
             if (!actual.user) return actual;
             const nueva = { ...actual, user: { ...actual.user, ...parcial } };
@@ -50,7 +51,26 @@ export function AuthProvider({ children }) {
             }
             return nueva;
         });
-    }
+    }, []);
+
+    // Con una sesión guardada, se pide el usuario actual al back (GET /api/user/me): así el rol, el
+    // presupuesto y la preferencia reflejan lo último que hay en la base, por ejemplo si le cambiaron el rol.
+    // Si el back responde 401 (token vencido o cuenta desactivada) se cierra la sesión.
+    // Si no hay conexión con el back, se conserva la sesión guardada.
+    useEffect(() => {
+        if (!session.token) return;
+        let cancelado = false;
+        getMe(session.token)
+            .then((actual) => {
+                if (!cancelado) updateUser(actual);
+            })
+            .catch((error) => {
+                if (!cancelado && error.status === 401) logout();
+            });
+        return () => {
+            cancelado = true;
+        };
+    }, [session.token, logout, updateUser]);
 
     return (
         <AuthContext.Provider value={{ user: session.user, token: session.token, login, logout, updateUser }}>
