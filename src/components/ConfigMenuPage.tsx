@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useSesionVencida } from '../hooks/useSesionVencida';
+import { generarMenu } from '../api/menus';
+import type { MenuApi } from '../data/menus';
 
 const DISPLAY = "font-['Bricolage_Grotesque',sans-serif]";
 
@@ -16,7 +20,6 @@ const CHIP_OPCION = 'flex cursor-pointer items-center gap-3 rounded-full border 
 const CARD_OPCION = 'flex h-full cursor-pointer items-start gap-3 rounded-2xl border border-blue-100 bg-white p-4 text-[#0A2350] transition hover:border-[#0B5FD0] has-checked:border-[#0B5FD0] has-checked:bg-blue-50 has-checked:shadow-sm';
 const CONTROL = `h-4 w-4 shrink-0 accent-[#0B5FD0] ${FOCO}`;
 const ALERTA = 'rounded-xl border border-[#F5C2BF] bg-[#FDECEA] px-4 py-3 text-sm font-medium text-[#A12A1F]';
-const EXITO = 'rounded-xl border border-[#BFE3C6] bg-[#EAF7EC] px-4 py-3 text-sm font-medium text-[#1E6B34]';
 
 // ----- Opciones (value = lo que viaja al backend, label = lo que ve el usuario) -----
 
@@ -57,6 +60,7 @@ const TOLERANCIAS: Opcion<ToleranciaSobras>[] = [
 
 const DIAS_MIN = 1;
 const DIAS_MAX = 14;
+const COMENSALES_MAX = 12; // Mismo límite que el backend
 
 // ----- Componentes de apoyo -----
 
@@ -148,7 +152,11 @@ export default function ConfigMenuPage() {
     const [errores, setErrores] = useState<Errores>({});
     const [pendiente, setPendiente] = useState<GenerarMenuPayload | null>(null);
     const [enviando, setEnviando] = useState(false);
-    const [enviado, setEnviado] = useState(false);
+    const [errorEnvio, setErrorEnvio] = useState<ErrorEnvio | null>(null);
+
+    const { token } = useAuth();
+    const manejarSesion = useSesionVencida();
+    const navigate = useNavigate();
 
     const totalComidas = dias * comidas.length;
 
@@ -187,7 +195,8 @@ export default function ConfigMenuPage() {
         const nComensales = entero(comensales);
         const nFuera = entero(comidasFuera);
 
-        if (nComensales === null || nComensales < 1) nuevos.comensales = 'Ingresa un número entero mayor o igual a 1.';
+        if (nComensales === null || nComensales < 1 || nComensales > COMENSALES_MAX)
+            nuevos.comensales = `Ingresa un número entero entre 1 y ${COMENSALES_MAX}.`;
         if (dias < DIAS_MIN || dias > DIAS_MAX) nuevos.dias = `Elige entre ${DIAS_MIN} y ${DIAS_MAX} días.`;
         if (comidas.length === 0) nuevos.comidas = 'Elige al menos una comida.';
         if (nFuera === null) nuevos.comidasFuera = 'Ingresa un número entero (0 si comes todo en casa).';
@@ -198,7 +207,7 @@ export default function ConfigMenuPage() {
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        setEnviado(false);
+        setErrorEnvio(null);
 
         const nuevos = validar();
         setErrores(nuevos);
@@ -227,35 +236,31 @@ export default function ConfigMenuPage() {
 
     function cerrarResumen() {
         setPendiente(null);
+        setErrorEnvio(null);
     }
 
     async function confirmarEnvio() {
-        if (!pendiente) return;
+        if (!pendiente || enviando) return;
         setEnviando(true);
+        setErrorEnvio(null);
 
-        console.log(pendiente);
-        setEnviado(true);
-        setEnviando(false);
-        setPendiente(null);
-
-        // TODO: conectar con el backend cuando exista el endpoint (y manejar el error dentro del modal).
-        // Usar el helper del proyecto, que agrega la URL base, el token y el manejo de errores:
-        //
-        //   import { request } from '../api/client';
-        //   import { useAuth } from '../context/AuthContext';
-        //   const { token } = useAuth();
-        //
-        //   const menu = await request('/api/generar-menu', { method: 'POST', token, body: pendiente });
-        //
-        // O directamente con fetch:
-        //
-        //   const response = await fetch(`${import.meta.env.VITE_API_URL}/api/generar-menu`, {
-        //       method: 'POST',
-        //       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        //       body: JSON.stringify(pendiente),
-        //   });
-        //   if (!response.ok) throw new Error('No pudimos generar el menú.');
-        //   const menu = await response.json();
+        try {
+            const menu: MenuApi = await generarMenu(token, pendiente);
+            // La vista del menú usa esta respuesta directamente, sin pedirlo de nuevo.
+            navigate(`/menus/${menu.id}`, { state: { menu } });
+        } catch (error) {
+            const err = error as Error & { status?: number };
+            if (manejarSesion(err)) return;
+            if (err.status === 409) {
+                // No hay recetas compatibles con las restricciones del usuario.
+                setErrorEnvio({ mensaje: err.message, revisarPerfil: true });
+            } else if (err.status === 422) {
+                setErrorEnvio({ mensaje: 'Algunos datos no son válidos. Vuelve al formulario y revísalos.' });
+            } else {
+                setErrorEnvio({ mensaje: err.message || 'No pudimos generar el menú. Intenta de nuevo.' });
+            }
+            setEnviando(false);
+        }
     }
 
     const hayErrores = Object.keys(errores).length > 0;
@@ -307,16 +312,21 @@ export default function ConfigMenuPage() {
                                             type="number"
                                             inputMode="numeric"
                                             min={1}
+                                            max={COMENSALES_MAX}
                                             step={1}
                                             value={comensales}
                                             onChange={(e) => setComensales(e.target.value)}
                                             aria-invalid={errores.comensales ? 'true' : 'false'}
-                                            aria-describedby={errores.comensales ? 'comensales-error' : undefined}
+                                            aria-describedby={errores.comensales ? 'comensales-error' : 'comensales-ayuda'}
                                             className={`${INPUT} ${errores.comensales ? 'border-[#D9534F]' : 'border-blue-100'}`}
                                         />
-                                        {errores.comensales && (
+                                        {errores.comensales ? (
                                             <p id="comensales-error" className={ERROR}>
                                                 {errores.comensales}
+                                            </p>
+                                        ) : (
+                                            <p id="comensales-ayuda" className={AYUDA}>
+                                                Hasta {COMENSALES_MAX} personas.
                                             </p>
                                         )}
                                     </div>
@@ -477,11 +487,6 @@ export default function ConfigMenuPage() {
                                     Revisa los campos marcados.
                                 </div>
                             )}
-                            {enviado && !hayErrores && (
-                                <div role="status" className={`${EXITO} mr-auto`}>
-                                    Enviamos tu configuración (revisa el payload en la consola).
-                                </div>
-                            )}
                             <button
                                 type="submit"
                                 className={`w-full rounded-full bg-[#0B5FD0] px-7 py-4 text-[17px] font-bold text-white transition hover:-translate-y-0.5 hover:shadow-lg sm:w-auto ${FOCO}`}
@@ -496,6 +501,7 @@ export default function ConfigMenuPage() {
             <ModalResumen
                 payload={pendiente}
                 enviando={enviando}
+                error={errorEnvio}
                 onCancelar={cerrarResumen}
                 onConfirmar={confirmarEnvio}
             />
@@ -513,15 +519,21 @@ function plural(n: number, singular: string, varias: string): string {
     return `${n} ${n === 1 ? singular : varias}`;
 }
 
+interface ErrorEnvio {
+    mensaje: string;
+    revisarPerfil?: boolean;
+}
+
 interface ModalResumenProps {
     payload: GenerarMenuPayload | null;
     enviando: boolean;
+    error: ErrorEnvio | null;
     onCancelar: () => void;
     onConfirmar: () => void;
 }
 
 // Usa <dialog> nativo: showModal() bloquea el fondo, atrapa el foco y cierra con Escape.
-function ModalResumen({ payload, enviando, onCancelar, onConfirmar }: ModalResumenProps) {
+function ModalResumen({ payload, enviando, error, onCancelar, onConfirmar }: ModalResumenProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     useEffect(() => {
@@ -601,6 +613,33 @@ function ModalResumen({ payload, enviando, onCancelar, onConfirmar }: ModalResum
                     ))}
                 </div>
 
+                {(error || enviando) && (
+                    <div className="px-7 pb-4 sm:px-8">
+                        {error ? (
+                            <div role="alert" className={ALERTA}>
+                                <p>{error.mensaje}</p>
+                                {error.revisarPerfil && (
+                                    <p className="mt-1">
+                                        Puedes{' '}
+                                        <Link to="/perfil" className="font-bold underline">
+                                            revisar tus restricciones alimentarias
+                                        </Link>{' '}
+                                        o quitar ingredientes excluidos.
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p
+                                aria-live="polite"
+                                className="rounded-xl bg-[#F4F7FB] px-4 py-3 text-sm font-medium text-[#42516A]"
+                            >
+                                Estamos armando tu menú y cotizando los ingredientes en Lider. Puede tardar unos
+                                segundos.
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 <div className="flex flex-col-reverse gap-3 border-t border-blue-100 px-7 py-5 sm:flex-row sm:justify-end sm:px-8">
                     <button
                         type="button"
@@ -617,7 +656,7 @@ function ModalResumen({ payload, enviando, onCancelar, onConfirmar }: ModalResum
                         autoFocus
                         className={`rounded-full bg-[#0B5FD0] px-7 py-3 font-bold text-white transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 ${FOCO}`}
                     >
-                        {enviando ? 'Enviando…' : 'Confirmar y generar'}
+                        {enviando ? 'Generando tu menú…' : error ? 'Reintentar' : 'Confirmar y generar'}
                     </button>
                 </div>
             </div>
@@ -635,7 +674,7 @@ function ModalResumen({ payload, enviando, onCancelar, onConfirmar }: ModalResum
  *
  *  interface GenerarMenuPayload {
  *      logistics: {
- *          diners: number;                 // Comensales, entero >= 1
+ *          diners: number;                 // Comensales, entero entre 1 y 12
  *          days: number;                   // Duración del menú, entero entre 1 y 14
  *          meals: ('almuerzo' | 'cena')[]; // Al menos una comida
  *          meals_out: number;              // Comidas fuera de casa, entero >= 0 y < days * meals.length

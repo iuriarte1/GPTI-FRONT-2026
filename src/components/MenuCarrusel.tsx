@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { desdeClave, type MenuGuardado } from '../data/menus';
+import { desdeClave, type MenuResumenApi } from '../data/menus';
 
 const DISPLAY = "font-['Bricolage_Grotesque',sans-serif]";
 
@@ -9,17 +9,12 @@ const FLECHA = `flex h-10 w-10 shrink-0 items-center justify-center rounded-full
 
 const RANGO = new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'short' });
 const CREADO = new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
 interface MenuCarruselProps {
-    menus: MenuGuardado[]; // Del más nuevo al más antiguo
-    seleccionado: string;
-    onSeleccionar: (id: string) => void;
-}
-
-function contarPlatos(menu: MenuGuardado) {
-    const platos = Object.values(menu.asignaciones);
-    const fuera = platos.filter((p) => p.origen === 'fuera').length;
-    return { caseros: platos.length - fuera, fuera };
+    menus: MenuResumenApi[]; // Del más nuevo al más antiguo
+    seleccionado: number;
+    onSeleccionar: (id: number) => void;
 }
 
 export default function MenuCarrusel({ menus, seleccionado, onSeleccionar }: MenuCarruselProps) {
@@ -45,7 +40,6 @@ export default function MenuCarrusel({ menus, seleccionado, onSeleccionar }: Men
                 <ul ref={pistaRef} className="flex min-w-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth py-2">
                     {menus.map((menu, i) => {
                         const activo = menu.id === seleccionado;
-                        const { caseros, fuera } = contarPlatos(menu);
                         return (
                             <li key={menu.id} className="shrink-0 snap-start">
                                 <button
@@ -58,7 +52,7 @@ export default function MenuCarrusel({ menus, seleccionado, onSeleccionar }: Men
                                 >
                                     <span className="flex w-full items-center justify-between gap-2">
                                         <span className={`${DISPLAY} text-lg font-extrabold text-[#0A2350]`}>
-                                            {RANGO.formatRange(desdeClave(menu.inicio), desdeClave(menu.fin))}
+                                            {RANGO.formatRange(desdeClave(menu.start_date), desdeClave(menu.end_date))}
                                         </span>
                                         {i === 0 && (
                                             <span className="rounded-full bg-[#FFC629] px-2 py-0.5 text-[11px] font-bold uppercase text-[#0A2350]">
@@ -66,12 +60,13 @@ export default function MenuCarrusel({ menus, seleccionado, onSeleccionar }: Men
                                             </span>
                                         )}
                                     </span>
-                                    <span className="font-semibold text-[#0A2350]">{menu.nombre}</span>
+                                    <span className="font-semibold text-[#0A2350]">{menu.name}</span>
                                     <span className="text-sm text-[#42516A]">
-                                        {caseros} caseros · {fuera} fuera
+                                        {menu.home_meals} caseros · {menu.out_meals} fuera
+                                        {menu.total_cost !== null && <> · {CLP.format(menu.total_cost)}</>}
                                     </span>
                                     <span className="text-xs text-[#8A97AB]">
-                                        Creado el {CREADO.format(desdeClave(menu.creadoEn))}
+                                        Creado el {CREADO.format(new Date(menu.created_at))}
                                     </span>
                                 </button>
                             </li>

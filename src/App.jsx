@@ -5,6 +5,7 @@ import RegisterPage from './components/RegisterPage'
 import AppHome from './components/AppHome'
 import PerfilPage from './components/PerfilPage'
 import ConfigMenuPage from './components/ConfigMenuPage'
+import MenuGeneradoPage from './components/MenuGeneradoPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -35,6 +36,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ConfigMenuPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/menus/:id"
+          element={
+            <ProtectedRoute>
+              <MenuGeneradoPage />
             </ProtectedRoute>
           }
         />
