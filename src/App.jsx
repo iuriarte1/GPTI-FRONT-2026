@@ -7,6 +7,8 @@ import PerfilPage from './components/PerfilPage'
 import ConfigMenuPage from './components/ConfigMenuPage'
 import MenuGeneradoPage from './components/MenuGeneradoPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import RutaGestor from './components/RutaGestor'
+import GestorRecetasPage from './components/GestorRecetasPage'
 
 function App() {
   return (
@@ -45,6 +47,14 @@ function App() {
             <ProtectedRoute>
               <MenuGeneradoPage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gestor"
+          element={
+            <RutaGestor>
+              <GestorRecetasPage />
+            </RutaGestor>
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
