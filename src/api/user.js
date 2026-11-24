@@ -19,3 +19,8 @@ export function saveDietaryProfile(token, { diet_type, allergies, consent }) {
 export function deleteDietaryProfile(token) {
     return request('/api/user/dietary-profile', { method: 'DELETE', token });
 }
+
+// Opciones de dieta y alergias que acepta el backend ({ diet_types, allergies }, cada una { value, label }).
+export function getDietaryOptions() {
+    return request('/api/user/dietary-options');
+}

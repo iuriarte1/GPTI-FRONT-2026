@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { deleteDietaryProfile, getDietaryProfile, saveDietaryProfile, savePreferences } from '../api/user';
-import { DIETAS, INTENCIONES, RESTRICCIONES } from '../constants/restricciones';
+import { deleteDietaryProfile, getDietaryOptions, getDietaryProfile, saveDietaryProfile, savePreferences } from '../api/user';
+import { INTENCIONES } from '../constants/restricciones';
 
 const DISPLAY = "font-['Bricolage_Grotesque',sans-serif]";
 
@@ -65,6 +65,7 @@ export default function PerfilPage() {
     const [cargandoPerfil, setCargandoPerfil] = useState(true);
     const [errorCarga, setErrorCarga] = useState('');
     const [intento, setIntento] = useState(0);
+    const [opciones, setOpciones] = useState({ dietas: [], alergias: [] }); // Vienen del backend
     const [dieta, setDieta] = useState('con_carne');
     const [alergias, setAlergias] = useState([]);
     const [consentimiento, setConsentimiento] = useState(false);
@@ -81,13 +82,15 @@ export default function PerfilPage() {
 
     useEffect(() => {
         let cancelado = false;
-        getDietaryProfile(token)
-            .then((datos) => {
+        Promise.all([getDietaryProfile(token), getDietaryOptions()])
+            .then(([datos, { diet_types, allergies }]) => {
                 if (cancelado) return;
                 const { dieta: d, alergias: a } = formularioDesde(datos);
+                setOpciones({ dietas: diet_types ?? [], alergias: allergies ?? [] });
                 setPerfil(datos);
                 setDieta(d);
-                setAlergias(a);
+                // Una alergia guardada que el backend ya no ofrece no se reenvía al guardar (respondería 422).
+                setAlergias(a.filter((valor) => (allergies ?? []).some((o) => o.value === valor)));
                 setCargandoPerfil(false);
             })
             .catch((error) => {
@@ -392,10 +395,10 @@ export default function PerfilPage() {
                                                 Guardadas actualmente
                                             </p>
                                             <ul className="flex flex-wrap gap-2">
-                                                <li className={CHIP}>{etiqueta(DIETAS, perfil.diet_type)}</li>
+                                                <li className={CHIP}>{etiqueta(opciones.dietas, perfil.diet_type)}</li>
                                                 {perfil.allergies.map((a) => (
                                                     <li key={a} className={CHIP}>
-                                                        {etiqueta(RESTRICCIONES, a)}
+                                                        {etiqueta(opciones.alergias, a)}
                                                     </li>
                                                 ))}
                                             </ul>
@@ -407,9 +410,9 @@ export default function PerfilPage() {
 
                                     <form onSubmit={handleGuardarRestricciones} noValidate className="flex flex-col gap-6">
                                         <fieldset>
-                                            <legend className="mb-3 text-sm font-semibold text-[#0A2350]">Dieta</legend>
+                                            <legend className="mb-3 text-sm font-semibold text-[#0A2350]">Tipo de dieta</legend>
                                             <div className="flex flex-wrap gap-3">
-                                                {DIETAS.map(({ value, label }) => (
+                                                {opciones.dietas.map(({ value, label }) => (
                                                     <label key={value} className={OPCION}>
                                                         <input
                                                             type="radio"
@@ -427,10 +430,13 @@ export default function PerfilPage() {
 
                                         <fieldset>
                                             <legend className="mb-3 text-sm font-semibold text-[#0A2350]">
-                                                Restricciones y alergias
+                                                Soy alérgico o intolerante a
                                             </legend>
+                                            {opciones.alergias.length === 0 && (
+                                                <p className="text-[15px] text-[#42516A]">No hay alergias configuradas.</p>
+                                            )}
                                             <div className="flex flex-wrap gap-3">
-                                                {RESTRICCIONES.map(({ value, label }) => (
+                                                {opciones.alergias.map(({ value, label }) => (
                                                     <label key={value} className={OPCION}>
                                                         <input
                                                             type="checkbox"
