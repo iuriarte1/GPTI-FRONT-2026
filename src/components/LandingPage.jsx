@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const DISPLAY = "font-['Bricolage_Grotesque',sans-serif]";
 
@@ -82,6 +83,8 @@ const SEMANA = [
 ];
 
 export default function LandingPage() {
+    const { token, logout } = useAuth();
+
     return (
         <div className="flex min-h-screen flex-col bg-white font-['DM_Sans',system-ui,sans-serif] leading-normal text-[#0F1B2D]">
             {/* ===== NAVBAR ===== */}
@@ -91,15 +94,35 @@ export default function LandingPage() {
                         <span className="text-4xl">❇️</span> NutriCart
                     </div>
                     <div className="flex items-center gap-6">
-                        <Link to="/login" className="font-semibold text-gray-600 transition hover:text-[#0B5FD0]">
-                            Iniciar Sesión
-                        </Link>
-                        <Link
-                            to="/registro"
-                            className="rounded-full bg-[#0B5FD0] px-6 py-2.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-                        >
-                            Crear cuenta
-                        </Link>
+                        {token ? (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={logout}
+                                    className="font-semibold text-gray-600 transition hover:text-[#0B5FD0]"
+                                >
+                                    Cerrar sesión
+                                </button>
+                                <Link
+                                    to="/app"
+                                    className="rounded-full bg-[#0B5FD0] px-6 py-2.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                                >
+                                    Ir a mi panel
+                                </Link>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/login" className="font-semibold text-gray-600 transition hover:text-[#0B5FD0]">
+                                    Iniciar Sesión
+                                </Link>
+                                <Link
+                                    to="/registro"
+                                    className="rounded-full bg-[#0B5FD0] px-6 py-2.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                                >
+                                    Crear cuenta
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
             </nav>
@@ -122,7 +145,7 @@ export default function LandingPage() {
                         </p>
                         <div className="flex flex-wrap items-center gap-4">
                             <Link
-                                to="/registro"
+                                to={token ? '/app' : '/registro'}
                                 className="rounded-full bg-[#0B5FD0] px-7 py-[17px] text-[17px] font-bold text-white no-underline transition hover:-translate-y-0.5 hover:shadow-lg 2xl:px-9 2xl:py-5 2xl:text-xl"
                             >
                                 Planificar mi semana

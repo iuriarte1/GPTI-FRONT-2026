@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import SesionActivaAviso from './SesionActivaAviso';
 
 const DISPLAY = "font-['Bricolage_Grotesque',sans-serif]";
 
@@ -23,7 +24,7 @@ function mensajeDeError(error) {
 }
 
 export default function LoginPage() {
-    const { token, login } = useAuth();
+    const { token, user, login, logout } = useAuth();
     const navigate = useNavigate();
 
     const [email, setEmail] = useState('');
@@ -32,8 +33,22 @@ export default function LoginPage() {
     const [errores, setErrores] = useState({});
     const [errorGeneral, setErrorGeneral] = useState('');
     const [cargando, setCargando] = useState(false);
+    // Si ya había una sesión al entrar a la página, se avisa en vez de redirigir en silencio.
+    // Se calcula solo al montar: tras un ingreso exitoso el token cambia, pero ahí no debe aparecer el aviso.
+    const [habiaSesion, setHabiaSesion] = useState(() => Boolean(token));
 
-    if (token) return <Navigate to="/app" replace />;
+    if (habiaSesion && token) {
+        return (
+            <SesionActivaAviso
+                user={user}
+                accion="ingresar con otra cuenta"
+                onCerrarSesion={() => {
+                    logout();
+                    setHabiaSesion(false);
+                }}
+            />
+        );
+    }
 
     async function handleSubmit(event) {
         event.preventDefault();
