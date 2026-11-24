@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSesionVencida } from '../hooks/useSesionVencida';
+import { esGestor } from '../constants/roles';
 import { listarMenus, obtenerMenu } from '../api/menus';
 import { menuDesdeApi } from '../data/menus';
 import CalendarioMenu from './CalendarioMenu';
@@ -115,6 +116,14 @@ export default function AppHome() {
                         <span className="text-4xl">❇️</span> NutriCart
                     </div>
                     <div className="flex items-center gap-3">
+                        {esGestor(user) && (
+                            <Link
+                                to="/gestor"
+                                className={`rounded-full border border-blue-100 px-6 py-2.5 font-semibold text-[#0A2350] transition hover:border-[#0B5FD0] hover:text-[#0B5FD0] ${FOCO}`}
+                            >
+                                Panel de recetas
+                            </Link>
+                        )}
                         <Link
                             to="/perfil"
                             className={`rounded-full border border-blue-100 px-6 py-2.5 font-semibold text-[#0A2350] transition hover:border-[#0B5FD0] hover:text-[#0B5FD0] ${FOCO}`}
