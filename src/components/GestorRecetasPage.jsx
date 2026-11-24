@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useSesionVencida } from '../hooks/useSesionVencida';
 import { aprobarReceta, listarRecetasGestor, rechazarReceta } from '../api/admin';
 import { ALERGENOS, ENFOQUES, ESTADOS_RECETA, TIPOS_DIETA } from '../constants/recetas';
+import FormularioReceta from './FormularioReceta';
+import GenerarRecetasDialog from './GenerarRecetasDialog';
 
 const DISPLAY = "font-['Bricolage_Grotesque',sans-serif]";
 
@@ -51,6 +53,8 @@ export default function GestorRecetasPage() {
     const [motivo, setMotivo] = useState('');
     const [trabajando, setTrabajando] = useState(null); // receta con una acción en curso
     const [errorAccion, setErrorAccion] = useState(SIN_ERROR);
+    const [editando, setEditando] = useState(null); // receta abierta en el formulario de edición
+    const [generando, setGenerando] = useState(false); // diálogo de "Generar con IA" abierto
 
     useEffect(() => {
         let cancelado = false;
@@ -130,6 +134,39 @@ export default function GestorRecetasPage() {
         }
     }
 
+    function recetaEditada(actualizada) {
+        setRecetas((actuales) => actuales.map((r) => (r.id === actualizada.id ? actualizada : r)));
+        setEditando(null);
+        setMensaje(`Guardamos los cambios de «${actualizada.title}».`);
+    }
+
+    // Las recetas de la IA llegan como pendientes: se vuelve a la pestaña de pendientes y se recarga la lista.
+    function recetasGeneradas({ created, discarded }) {
+        const partes = [
+            created.length === 0
+                ? 'La IA no entregó recetas válidas.'
+                : created.length === 1
+                  ? 'La IA generó 1 receta pendiente de revisión.'
+                  : `La IA generó ${created.length} recetas pendientes de revisión.`,
+        ];
+        if (discarded.length > 0) {
+            partes.push(
+                discarded.length === 1
+                    ? 'Descartó 1 borrador que no cumplía el formato.'
+                    : `Descartó ${discarded.length} borradores que no cumplían el formato.`,
+            );
+        }
+        setGenerando(false);
+        if (estado === 'pendiente') {
+            setRecetas(null);
+            setErrorCarga('');
+            setIntento((n) => n + 1);
+        } else {
+            cambiarEstado('pendiente');
+        }
+        setMensaje(partes.join(' '));
+    }
+
     function empezarRechazo(id) {
         setConfirmando(null);
         setErrorAccion(SIN_ERROR);
@@ -186,23 +223,28 @@ export default function GestorRecetasPage() {
                         menús de los usuarios.
                     </p>
 
-                    <div role="tablist" aria-label="Estado de las recetas" className="mb-6 flex flex-wrap gap-3">
-                        {ESTADOS_RECETA.map(({ value, label }) => (
-                            <button
-                                key={value}
-                                type="button"
-                                role="tab"
-                                aria-selected={estado === value}
-                                onClick={() => cambiarEstado(value)}
-                                className={`rounded-full border px-6 py-2.5 font-semibold transition ${FOCO} ${
-                                    estado === value
-                                        ? 'border-[#0B5FD0] bg-[#0B5FD0] text-white'
-                                        : 'border-blue-100 bg-white text-[#0A2350] hover:border-[#0B5FD0] hover:text-[#0B5FD0]'
-                                }`}
-                            >
-                                {label}
-                            </button>
-                        ))}
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                        <div role="tablist" aria-label="Estado de las recetas" className="flex flex-wrap gap-3">
+                            {ESTADOS_RECETA.map(({ value, label }) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={estado === value}
+                                    onClick={() => cambiarEstado(value)}
+                                    className={`rounded-full border px-6 py-2.5 font-semibold transition ${FOCO} ${
+                                        estado === value
+                                            ? 'border-[#0B5FD0] bg-[#0B5FD0] text-white'
+                                            : 'border-blue-100 bg-white text-[#0A2350] hover:border-[#0B5FD0] hover:text-[#0B5FD0]'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        <button type="button" onClick={() => setGenerando(true)} className={BOTON_PRIMARIO}>
+                            Generar con IA
+                        </button>
                     </div>
 
                     {mensaje && (
@@ -340,6 +382,14 @@ export default function GestorRecetasPage() {
                                                 >
                                                     Rechazar
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditando(receta)}
+                                                    disabled={trabajando === receta.id}
+                                                    className={BOTON_NAV}
+                                                >
+                                                    Editar
+                                                </button>
                                             </div>
 
                                             {confirmando === receta.id && (
@@ -423,6 +473,18 @@ export default function GestorRecetasPage() {
                     )}
                 </div>
             </main>
+
+            {editando && (
+                <FormularioReceta
+                    key={editando.id}
+                    receta={editando}
+                    onGuardado={recetaEditada}
+                    onCancelar={() => setEditando(null)}
+                />
+            )}
+            {generando && (
+                <GenerarRecetasDialog onGenerado={recetasGeneradas} onCancelar={() => setGenerando(false)} />
+            )}
         </div>
     );
 }
